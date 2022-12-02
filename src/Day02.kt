@@ -1,8 +1,11 @@
-private fun String.splitToPair(delimeter: String = " "): Pair<String, String> =
-    Pair(substringBefore(delimeter), substringAfter(delimeter))
+private fun String.splitToPair(): Pair<String, String> =
+    Pair(substringBefore(" "), substringAfter(" "))
 
-enum class Hand {
-    Rock, Paper, Scissor, Unknown;
+enum class Hand(val score: Int) {
+    Rock(1),
+    Paper(2),
+    Scissor(3),
+    Unknown(0);
 
     companion object {
         fun fromString(string: String): Hand =
@@ -15,21 +18,24 @@ enum class Hand {
     }
 }
 
-enum class Play(val play: Hand, val wins: Hand, val loses: Hand) {
+enum class Play(val hand: Hand, val wins: Hand, val loses: Hand) {
     Rock(Hand.Rock, wins = Hand.Scissor, loses = Hand.Paper),
     Paper(Hand.Paper, wins = Hand.Rock, loses = Hand.Scissor),
     Scissor(Hand.Scissor, wins = Hand.Paper, loses = Hand.Rock),
     Unknown(Hand.Unknown, wins = Hand.Unknown, loses = Hand.Unknown);
 
-    fun compare(other: Play): Int =
-        when (other.play) {
-            wins -> 6
-            loses -> 0
-            play -> 3
-            else -> 0
+    fun compare(other: Play): Result =
+        when (other.hand) {
+            wins -> Result.Win
+            loses -> Result.Lose
+            hand -> Result.Draw
+            else -> Result.Unknown
         }
 
     companion object {
+        fun fromString(string: String): Play =
+            fromHand(Hand.fromString(string))
+
         fun fromHand(play: Hand): Play =
             when (play) {
                 Hand.Rock -> Rock
@@ -40,8 +46,11 @@ enum class Play(val play: Hand, val wins: Hand, val loses: Hand) {
     }
 }
 
-enum class Result {
-    Win, Lose, Draw, Unknown;
+enum class Result(val score: Int) {
+    Win(6),
+    Lose(0),
+    Draw(3),
+    Unknown(0);
 
     companion object {
         fun fromString(string: String): Result =
@@ -56,61 +65,33 @@ enum class Result {
 
 fun main() {
     fun part1(input: List<String>): Int {
-        val rounds: List<Pair<Hand, Hand>> =
+        val rounds: List<Pair<Play, Play>> =
             input
-                .map { it.splitToPair() }
-                .map { Pair(Hand.fromString(it.first), Hand.fromString(it.second)) }
+                .map(String::splitToPair)
+                .map { Pair(Play.fromString(it.first), Play.fromString(it.second)) }
 
-        val totalScore: Int = rounds.fold(0) { acc, pair ->
-            val (opponent, me) = pair
-            // Score for my play
-            val playScore: Int = when (me) {
-                Hand.Rock -> 1
-                Hand.Paper -> 2
-                Hand.Scissor -> 3
-                Hand.Unknown -> 0
-            }
-
-            val opponentPlay = Play.fromHand(opponent)
-            val myPlay = Play.fromHand(me)
-            val roundScore: Int = myPlay.compare(opponentPlay)
-
-            acc + playScore + roundScore
+        return rounds.fold(0) { acc, (opponentPlay, myPlay) ->
+            val roundResult: Result = myPlay.compare(opponentPlay)
+            acc + roundResult.score + myPlay.hand.score
         }
-
-        return totalScore
     }
 
     fun part2(input: List<String>): Int {
-        val rounds: List<Pair<Hand, Result>> =
+        val rounds: List<Pair<Play, Result>> =
             input
-                .map { it.splitToPair() }
-                .map { Pair(Hand.fromString(it.first), Result.fromString(it.second)) }
+                .map(String::splitToPair)
+                .map { Pair(Play.fromString(it.first), Result.fromString(it.second)) }
 
-        val totalScore: Int = rounds.fold(0) { acc, (opponent, expectedResult) ->
-            val opponentPlay = Play.fromHand(opponent)
-            val me: Hand = when (expectedResult) {
-                Result.Draw -> opponent
+        return rounds.fold(0) { acc, (opponentPlay, expectedResult) ->
+            val myHand: Hand = when (expectedResult) {
+                Result.Draw -> opponentPlay.hand
                 Result.Win -> opponentPlay.loses
                 Result.Lose -> opponentPlay.wins
-                else -> opponentPlay.wins
+                else -> opponentPlay.hand
             }
 
-            val playScore: Int = when (me) {
-                Hand.Rock -> 1
-                Hand.Paper -> 2
-                Hand.Scissor -> 3
-                Hand.Unknown -> 0
-            }
-
-            val myPlay = Play.fromHand(me)
-
-            val roundScore: Int = myPlay.compare(opponentPlay)
-
-            acc + playScore + roundScore
+            acc + myHand.score + expectedResult.score
         }
-
-        return totalScore
     }
 
     val input = readInput("Day02")
