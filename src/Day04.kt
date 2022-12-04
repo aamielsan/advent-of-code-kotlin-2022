@@ -1,32 +1,23 @@
 fun main() {
-    fun part1(input: List<String>): Int {
-        fun check(set1: Set<Int>, set2: Set<Int>): Boolean =
-            (set1 intersect set2)
-                .let { it == set1 || it == set2 }
-
-        return input
+    fun part1(input: List<String>): Int =
+        input
             .map { line ->
                 line
                     .split(",")
                     .map(ElfCleaner::fromString)
-                    .let { it[0].overlaps(it[1], ::check) }
+                    .let { it[0].overlapsWithAllSection(it[1]) }
             }
             .sumOf(Boolean::toInt)
-    }
 
-    fun part2(input: List<String>): Int {
-        fun check(set1: Set<Int>, set2: Set<Int>): Boolean =
-            (set1 intersect set2).isNotEmpty()
-
-        return input
+    fun part2(input: List<String>): Int =
+        input
             .map { line ->
                 line
                     .split(",")
                     .map(ElfCleaner::fromString)
-                    .let { it[0].overlaps(it[1], ::check)}
+                    .let { it[0].overlapsWithOneSection(it[1]) }
             }
             .sumOf(Boolean::toInt)
-    }
 
     val input = readInput("Day04")
     println(part1(input))
@@ -34,18 +25,29 @@ fun main() {
 }
 
 private class ElfCleaner private constructor(
-    private val coverage: Set<Int>
+    private val sections: Set<Int>
 ) {
-    fun overlaps(
+    fun overlapsWithAllSection(other: ElfCleaner): Boolean =
+        overlapsSection(other) { section1, section2 ->
+            (section1 intersect section2)
+                .let { it == this.sections || it == other.sections }
+        }
+
+    fun overlapsWithOneSection(other: ElfCleaner): Boolean =
+        overlapsSection(other) { section1, section2 ->
+            (section1 intersect section2).isNotEmpty()
+        }
+
+    private fun overlapsSection(
         other: ElfCleaner,
         predicate: (Set<Int>, Set<Int>) -> Boolean
     ): Boolean =
-        predicate(coverage, other.coverage)
+        predicate(sections, other.sections)
 
     companion object {
         fun fromString(string: String) =
             ElfCleaner(
-                coverage = string
+                sections = string
                     .split("-")
                     .let {
                         (it[0].toInt()..it[1].toInt()).toSet()
